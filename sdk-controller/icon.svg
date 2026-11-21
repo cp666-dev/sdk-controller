@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3c4145"/>
+      <stop offset="1" stop-color="#1b1d1f"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd36b"/>
+      <stop offset="1" stop-color="#ffba00"/>
+    </linearGradient>
+  </defs>
+  <!-- Ground: LUNA's slate button skin, edged like its panels -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
+  <rect x="17.5" y="17.5" width="477" height="477" rx="94.5" fill="none" stroke="#000" stroke-opacity=".6" stroke-width="3"/>
+  <!-- The chat: a speech bubble -->
+  <path d="M128 124h256a44 44 0 0 1 44 44v136a44 44 0 0 1-44 44H236l-74 58v-58h-34a44 44 0 0 1-44-44V168a44 44 0 0 1 44-44z"
+        fill="#1b1d1f" stroke="#e5f5ff" stroke-width="18" stroke-linejoin="round"/>
+  <!-- What it makes: code brackets around a spark -->
+  <path d="M196 196l-40 40 40 40M316 196l40 40-40 40" fill="none" stroke="#a9c1d3" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 186c6 30 18 42 48 50-30 8-42 20-48 50-6-30-18-42-48-50 30-8 42-20 48-50z" fill="url(#amber)"/>
+</svg>

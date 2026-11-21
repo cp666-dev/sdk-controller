@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SDK Controller</title>
+  <link rel="stylesheet" href="ui/tokens.css">
+  <link rel="stylesheet" href="ui/panel.css">
+</head>
+<body>
+  <div class="sdc" id="app">
+    <header class="sdc-bridge">
+      <!-- SDK Controller's mark, from icon.svg: the bubble is the chat, the spark what it makes. -->
+      <svg class="sdc-mark" id="mark" viewBox="72 112 368 312" aria-hidden="true" data-state="offline">
+        <path class="ring" d="M128 124h256a44 44 0 0 1 44 44v136a44 44 0 0 1-44 44H236l-74 58v-58h-34a44 44 0 0 1-44-44V168a44 44 0 0 1 44-44z" fill="none" stroke-width="22" stroke-linejoin="round"/>
+        <path class="letters" d="M196 196l-40 40 40 40M316 196l40 40-40 40" fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        <path class="core" d="M256 186c6 30 18 42 48 50-30 8-42 20-48 50-6-30-18-42-48-50 30-8 42-20 48-50z"/>
+      </svg>
+      <div class="sdc-state-text">
+        <div class="sdc-state-word" id="state-word">OFFLINE</div>
+        <div class="sdc-state-detail" id="status" aria-live="polite">Waiting for LUNA</div>
+      </div>
+      <button class="sdc-btn" id="new-chat" type="button" title="Start a new conversation">NEW</button>
+      <button class="sdc-btn" id="share-toggle" type="button" aria-expanded="false" title="Share an Add On you built to UA Universe">SHARE</button>
+      <button class="sdc-btn" id="settings-toggle" type="button" aria-expanded="false">SETTINGS</button>
+    </header>
+
+    <section class="sdc-settings" id="share" hidden>
+      <div class="sdc-share-title">Share to UA Universe</div>
+      <div class="sdc-note" id="share-note"></div>
+      <div id="share-form">
+        <label>Add On
+          <select id="share-addon"></select>
+        </label>
+        <label>Your name, shown on Universe as its builder
+          <input id="share-name" maxlength="60" autocomplete="name" spellcheck="false">
+        </label>
+        <label>Title
+          <input id="share-title" maxlength="60" spellcheck="true">
+        </label>
+        <label>What it does
+          <textarea id="share-description" rows="3" maxlength="400" spellcheck="true"></textarea>
+        </label>
+        <label>Category, where it's listed
+          <select id="share-category"></select>
+        </label>
+        <label class="sdc-check">
+          <input type="checkbox" id="share-agree">
+          I made this and I'm happy for it to be published, and listed on UA Universe for anyone to download, credited to the name above.
+        </label>
+        <div class="sdc-row">
+          <button class="sdc-btn is-on" id="share-send" type="button">SHARE TO UNIVERSE</button>
+          <button class="sdc-btn" id="share-open" type="button" hidden>OPEN ON UNIVERSE</button>
+        </div>
+        <div class="sdc-note" id="share-status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="sdc-settings" id="settings" hidden>
+      <label>Provider
+        <select id="provider"></select>
+      </label>
+      <label>Model
+        <select id="model"></select>
+        <input id="model-custom" spellcheck="false" autocomplete="off" placeholder="Model name, as the server knows it" hidden>
+      </label>
+      <label id="base-url-row">Base URL
+        <input id="base-url" spellcheck="false" autocomplete="off" placeholder="https://host/v1">
+      </label>
+      <div class="sdc-note" id="key-help"></div>
+      <div class="sdc-row">
+        <button class="sdc-btn is-on" id="get-key" type="button">GET A FREE KEY</button>
+        <button class="sdc-btn is-on" id="claude-login" type="button" hidden>SIGN IN TO CLAUDE</button>
+      </div>
+      <label>API key
+        <input id="api-key" type="password" spellcheck="false" autocomplete="off">
+      </label>
+      <div class="sdc-note" id="key-note"></div>
+      <div class="sdc-row">
+        <button class="sdc-btn" id="save-key" type="button">SAVE KEY</button>
+        <button class="sdc-btn" id="delete-key" type="button">DELETE KEY</button>
+      </div>
+      <label class="sdc-check">
+        <input type="checkbox" id="auto-approve">
+        Run session edits without asking. Deletes and raw engine commands still ask. Building an Add On never asks: it runs straight through, and installs only once its checks pass.
+      </label>
+      <div class="sdc-note" id="helper-note"></div>
+      <div class="sdc-row">
+        <button class="sdc-btn" id="get-builder" type="button" hidden>GET THE BUILDER</button>
+      </div>
+    </section>
+
+    <div class="sdc-sec">
+      <div class="sdc-sec-title">CONVERSATION</div>
+    </div>
+    <div class="sdc-wellwrap">
+      <main class="sdc-log" id="log" aria-live="polite"></main>
+    </div>
+
+    <section class="sdc-busy" id="busy" hidden aria-live="polite">
+      <div class="sdc-busy-head">
+        <span class="sdc-busy-led"></span>
+        <span class="sdc-busy-stage" id="busy-stage">Working...</span>
+        <span class="sdc-busy-time" id="busy-time">0:00</span>
+      </div>
+      <div class="sdc-seq" id="seq" role="grid" aria-label="Step sequencer: tap steps while it works"></div>
+      <div class="sdc-busy-hint">Tap the grid to make a beat while it works. Nothing here touches your session.</div>
+    </section>
+
+    <section class="sdc-approval" id="approval" data-risk="normal" hidden>
+      <div class="sdc-slot-body">
+        <div class="sdc-slot-head">
+          <div class="sdc-slot-title" id="approval-title"></div>
+          <button class="sdc-btn" id="decline" type="button">SKIP</button>
+        </div>
+        <ul class="sdc-steps" id="approval-steps"></ul>
+      </div>
+      <button class="sdc-go-col" id="approve" type="button">GO</button>
+    </section>
+
+    <form class="sdc-composer" id="composer">
+      <textarea id="prompt" rows="2" placeholder="Ask for an edit, or a new tool..." spellcheck="true"></textarea>
+      <button class="sdc-btn is-on" id="send" type="submit">SEND</button>
+      <button class="sdc-btn" id="stop" type="button" hidden>STOP</button>
+    </form>
+  </div>
+  <script src="vendor/luna.global.js"></script>
+  <script src="providers.js"></script>
+  <script src="agent.js"></script>
+  <script src="logic.js"></script>
+  <script src="builder.js"></script>
+  <script src="claude-subscription.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

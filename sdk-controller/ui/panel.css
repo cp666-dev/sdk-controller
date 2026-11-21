@@ -1,0 +1,136 @@
+/*
+ * SDK Controller side panel. Requires tokens.css. Follows CP Assistant's "Strip" panel: meter bridge
+ * with the UA mark, section header, dark well, a slot with a GO column whose colour carries the risk,
+ * and its step markers. Conversation text is larger than LUNA's 10px chrome, because it is read.
+ */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--aip-page); }
+
+.sdc { display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; background: var(--aip-page); color: var(--aip-text); font: bold 12px/1.35 var(--luna-font); text-shadow: var(--aip-text-shadow); -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none; cursor: default; }
+.sdc [hidden] { display: none !important; }
+:where(.sdc) button { font: inherit; color: inherit; text-shadow: inherit; margin: 0; padding: 0; border: 0; background: none; cursor: default; -webkit-appearance: none; appearance: none; }
+:where(.sdc) button:focus { outline: none; }
+.sdc button:focus-visible, .sdc input:focus-visible, .sdc select:focus-visible { outline: 1px solid var(--aip-seg-underline); outline-offset: -2px; }
+
+/* mark: the bubble (ring) and brackets (letters) are strokes, the spark (core) a fill */
+.sdc-mark { display: block; flex: none; width: 42px; height: 36px; overflow: visible; }
+.sdc-mark path { transition: fill .2s ease-out, stroke .2s ease-out, opacity .08s linear; }
+.sdc-mark .ring { stroke: var(--aip-text); }
+.sdc-mark .letters { stroke: var(--aip-key-on); }
+.sdc-mark .core { fill: var(--aip-amber); }
+.sdc-mark[data-state="offline"] .ring, .sdc-mark[data-state="offline"] .letters { stroke: var(--aip-text-dim); }
+.sdc-mark[data-state="offline"] .core { fill: var(--aip-text-dim); }
+.sdc-mark[data-state="working"] .core { animation: sdc-think .9s ease-in-out infinite alternate; }
+.sdc-mark[data-state="working"] .letters { stroke: var(--aip-amber); }
+.sdc-mark[data-state="attention"] .ring { stroke: var(--aip-amber); }
+.sdc-mark[data-state="paused"] .ring, .sdc-mark[data-state="paused"] .letters { stroke: var(--aip-text-grey); }
+.sdc-mark[data-state="paused"] .core { fill: var(--aip-text-grey); }
+@keyframes sdc-think { from { opacity: 1; } to { opacity: .55; } }
+
+/* meter bridge */
+.sdc-bridge { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--aip-bridge); border-bottom: 1px solid var(--aip-line); }
+.sdc-state-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sdc-state-word { font-size: 17px; line-height: 20px; }
+.sdc-state-detail { font-size: 12px; line-height: 15px; color: var(--aip-text-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sdc[data-state="offline"] .sdc-state-word, .sdc[data-state="paused"] .sdc-state-word { color: var(--aip-text-grey); }
+.sdc[data-state="attention"] .sdc-state-word { color: var(--aip-amber); }
+
+/* buttons */
+.sdc .sdc-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 11px; border: 1px solid var(--aip-edge); border-radius: 2px; background: var(--aip-skin-grey); color: var(--aip-text); font-size: 12px; line-height: 1; }
+.sdc .sdc-btn:hover { color: var(--aip-hover); }
+.sdc .sdc-btn:active { background: var(--aip-skin-grey-down); }
+.sdc .sdc-btn.is-on { background: var(--aip-skin-on); }
+.sdc .sdc-btn.is-on:active { background: var(--aip-skin-on-down); }
+.sdc .sdc-btn[disabled] { color: var(--aip-text-dim); }
+
+/* settings */
+.sdc-settings { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; overflow-y: auto; background: var(--aip-slot); border-bottom: 1px solid var(--aip-line); }
+.sdc-settings label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; line-height: 15px; color: var(--aip-text-section); text-transform: uppercase; }
+.sdc-settings .sdc-check { flex-direction: row; align-items: flex-start; gap: 7px; font-size: 13px; color: var(--aip-text-grey); text-transform: none; }
+.sdc-settings input:not([type=checkbox]), .sdc-settings select { width: 100%; height: 32px; padding: 0 10px; background: var(--aip-field); border: 1px solid var(--aip-field-edge); border-radius: 2px; color: var(--aip-text); font: bold 13px/1 var(--luna-font); text-shadow: none; outline: none; -webkit-user-select: text; user-select: text; }
+.sdc-settings input::placeholder { color: var(--aip-text-dim); }
+.sdc-settings input:focus { border-color: var(--luna-btn-blue-top); }
+.sdc-row { display: flex; gap: 6px; }
+.sdc-note { color: var(--aip-text-grey); font-size: 13px; font-weight: normal; line-height: 1.45; -webkit-user-select: text; user-select: text; }
+.sdc-note code { font: 10px Menlo, monospace; color: var(--aip-text-step); }
+
+/* Settings take the conversation's place while open. */
+.sdc.is-settings .sdc-sec, .sdc.is-settings .sdc-wellwrap { display: none; }
+.sdc-share-title { font-size: 16px; line-height: 20px; }
+.sdc-settings textarea { width: 100%; padding: 5px 8px; resize: vertical; background: var(--aip-field); border: 1px solid var(--aip-field-edge); border-radius: 2px; color: var(--aip-text); font: normal 14px/1.4 var(--luna-font); text-shadow: none; outline: none; -webkit-user-select: text; user-select: text; }
+.sdc-settings textarea:focus { border-color: var(--luna-btn-blue-top); }
+#share-form { display: flex; flex-direction: column; gap: 7px; }
+#share-status.is-error { color: var(--aip-text-destructive); }
+
+/* section header */
+.sdc-sec { flex: none; height: 30px; display: flex; align-items: center; justify-content: center; padding: 0 10px; background: var(--aip-section); border-bottom: 1px solid var(--aip-line); }
+.sdc-sec-title { color: var(--aip-text-section); white-space: nowrap; }
+
+/* the well */
+.sdc-wellwrap { flex: 1; min-height: 0; display: flex; padding: 8px; }
+.sdc-log { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 11px; padding: 14px; overflow-x: hidden; overflow-y: auto; background: var(--aip-field-dark); border: 1px solid #000; border-radius: 4px; font: normal 15px/1.5 var(--luna-font); text-shadow: none; -webkit-user-select: text; user-select: text; }
+.sdc-log::-webkit-scrollbar { width: 8px; }
+.sdc-log::-webkit-scrollbar-track { background: transparent; }
+.sdc-log::-webkit-scrollbar-thumb { background: var(--luna-btn-grey-top); border-radius: 4px; border: 2px solid var(--aip-field-dark); }
+.sdc-empty { margin: auto; max-width: 260px; text-align: center; color: var(--aip-text-grey); }
+.sdc-msg { flex: none; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--aip-text-step); }
+.sdc-msg.user { align-self: flex-end; max-width: 90%; padding: 5px 8px; background: var(--aip-slot); border: 1px solid var(--aip-edge); border-radius: 3px; color: var(--aip-text); }
+.sdc-msg.error { color: var(--aip-text-destructive); }
+.sdc-msg.note { color: var(--aip-text-grey); }
+
+/* steps the model ran */
+.sdc-tool { flex: none; display: flex; gap: 7px; font-size: 13px; line-height: 18px; color: var(--aip-text-grey); }
+.sdc-tool-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sdc-tool-mk { flex: none; width: 16px; height: 18px; display: flex; align-items: center; justify-content: center; }
+.sdc-tool-mk::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--aip-text-dim); }
+.sdc-tool.running { color: var(--aip-amber); }
+.sdc-tool.running .sdc-tool-mk::before { width: 6px; height: 6px; background: var(--aip-amber); animation: sdc-think .8s ease-in-out infinite alternate; }
+.sdc-tool.ok .sdc-tool-mk::before { width: 9px; height: 5px; margin-top: -3px; border-radius: 0; background: none; border-left: 2px solid var(--aip-green); border-bottom: 2px solid var(--aip-green); transform: rotate(-45deg); }
+.sdc-tool.failed { color: var(--aip-text-destructive); }
+.sdc-tool.failed .sdc-tool-mk::before { width: 7px; height: 7px; border-radius: 1px; background: var(--aip-red); }
+
+/* the approval slot */
+.sdc-approval { flex: none; display: flex; max-height: 45%; margin: 0 6px 6px; background: var(--aip-slot); border: 1px solid var(--aip-edge); border-radius: 3px; overflow: hidden; animation: sdc-enter .16s ease-out; }
+.sdc-slot-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; padding: 8px 8px 10px 9px; }
+.sdc-slot-head { flex: none; display: flex; align-items: center; gap: 7px; }
+.sdc-slot-title { flex: 1; min-width: 0; font-size: 15px; line-height: 19px; }
+.sdc-steps { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; overflow-y: auto; list-style: none; -webkit-user-select: text; user-select: text; }
+.sdc-step { position: relative; padding-left: 14px; color: var(--aip-text-step); overflow-wrap: anywhere; }
+.sdc-step::before { content: ""; position: absolute; left: 5px; top: 5px; width: 3px; height: 3px; background: var(--aip-text-dim); }
+.sdc-step.is-destructive { padding: 4px 5px; border-radius: 2px; background: var(--aip-destructive-tint); color: var(--aip-text-destructive); }
+.sdc-step.is-destructive::before { display: none; }
+.sdc .sdc-go-col { flex: none; align-self: stretch; width: 76px; display: flex; align-items: center; justify-content: center; border-left: 1px solid #000; background: var(--aip-skin-on); font-size: 16px; line-height: 18px; }
+.sdc .sdc-go-col:hover { color: var(--aip-hover); }
+.sdc .sdc-go-col:active { background: var(--aip-skin-on-down); }
+.sdc-approval[data-risk="destructive"] .sdc-go-col { background: var(--aip-skin-red); }
+.sdc-approval[data-risk="destructive"] .sdc-go-col:active { background: var(--aip-skin-red-down); }
+@keyframes sdc-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* busy: a step sequencer to play with while a request runs */
+.sdc-busy { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 0 6px 6px; padding: 8px 9px; background: var(--aip-slot); border: 1px solid var(--aip-edge); border-radius: 3px; }
+.sdc-busy-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sdc-busy-led { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--aip-amber); box-shadow: 0 0 6px var(--aip-amber); animation: sdc-think .55s ease-in-out infinite alternate; }
+.sdc-busy-stage { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sdc-busy-time { flex: none; font: 12px Menlo, monospace; color: var(--aip-text-grey); }
+.sdc-seq { display: grid; grid-template-columns: 44px repeat(16, 1fr); gap: 3px; align-items: center; }
+.sdc-seq-name { font-size: 10px; line-height: 14px; color: var(--aip-text-grey); text-transform: uppercase; letter-spacing: .04em; }
+.sdc .sdc-cell { height: 20px; padding: 0; -webkit-appearance: none; appearance: none; font-size: 0; line-height: 0; color: transparent; border: 1px solid #000; border-radius: 2px; background: var(--aip-field-dark); transition: background .08s linear, box-shadow .12s ease-out; }
+.sdc .sdc-cell:nth-child(17n + 6), .sdc .sdc-cell:nth-child(17n + 10), .sdc .sdc-cell:nth-child(17n + 14) { margin-left: 2px; }
+.sdc .sdc-cell.is-on { background: var(--luna-btn-blue-top); }
+.sdc .sdc-cell.is-now { background: var(--aip-section); }
+.sdc .sdc-cell.is-on.is-now { background: var(--aip-amber); box-shadow: 0 0 8px var(--aip-amber); }
+.sdc .sdc-cell:hover { border-color: var(--aip-seg-underline); }
+.sdc-busy-hint { font-size: 11px; color: var(--aip-text-dim); }
+
+/* the prompt */
+.sdc-composer { flex: none; display: flex; align-items: stretch; gap: 8px; padding: 0 8px 8px; }
+/* Send and Stop fill the height of the box beside them. */
+.sdc .sdc-composer .sdc-btn { height: auto; min-width: 96px; font-size: 14px; letter-spacing: .03em; }
+.sdc-composer textarea { flex: 1; min-width: 0; height: 64px; padding: 8px 10px; resize: none; background: var(--aip-field); border: 1px solid var(--aip-field-edge); border-radius: 3px; color: var(--aip-text); font: normal 15px/1.4 var(--luna-font); text-shadow: none; outline: none; -webkit-user-select: text; user-select: text; }
+.sdc-composer textarea::placeholder { color: var(--aip-text-dim); }
+.sdc-composer textarea:focus { border-color: var(--luna-btn-blue-top); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sdc *, .sdc *::before, .sdc *::after { animation: none !important; transition: none !important; }
+}
