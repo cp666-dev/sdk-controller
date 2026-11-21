@@ -77,7 +77,6 @@ class Agent {
   reset() {
     this.stop();
     this.messages = [];
-    this.agenticSession = null;
   }
 
   /** Run one user request to its end. Hooks: onText(delta), onTurnStart(), onCalls(entries), onResult(entry). */
@@ -85,14 +84,6 @@ class Agent {
     if (this.running) throw new Error('Already working on a request.');
     const controller = new AbortController();
     this.controller = controller;
-    const provider = this.provider();
-    if (provider.agentic) {
-      try {
-        return await this.sendAgentic(provider, text, hooks, controller.signal);
-      } finally {
-        this.controller = null;
-      }
-    }
     this.messages.push({ role: 'user', text });
     try {
       for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -136,46 +127,6 @@ class Agent {
       throw e;
     } finally {
       this.controller = null;
-    }
-  }
-
-  /**
-   * A provider that runs the conversation itself (Claude Code on the user's subscription): send the
-   * request, and answer each tool call it makes through the same checks and approvals as here.
-   */
-  async sendAgentic(p, text, hooks, signal) {
-    const { turnId } = await p.start({
-      text,
-      system: this.system(),
-      tools: this.tools.map((t) => ({ name: t.name, description: t.description, schema: t.schema })),
-      sessionId: this.agenticSession ?? undefined,
-      model: p.model || undefined,
-    });
-    const stop = () => p.stop(turnId);
-    signal.addEventListener('abort', stop);
-    try {
-      let after = 0;
-      for (;;) {
-        if (signal.aborted) return { outcome: 'stopped' };
-        const { events, next } = await p.poll(turnId, after);
-        after = next;
-        for (const e of events) {
-          if (e.type === 'text') hooks.onText?.(e.text);
-          else if (e.type === 'notice') hooks.onNotice?.(e.text);
-          else if (e.type === 'tool') {
-            hooks.onTurnStart?.();
-            const [result] = await this.runCalls({ toolCalls: [{ id: e.callId, name: e.name, input: e.input }], stopReason: 'tool_use' }, hooks, signal);
-            await p.toolResult(turnId, e.callId, result.content, result.isError);
-          } else if (e.type === 'done') {
-            if (e.sessionId) this.agenticSession = e.sessionId;
-            if (signal.aborted || e.subtype === 'stopped') return { outcome: 'stopped' };
-            if (e.isError) throw new Error(e.error || e.text || `Claude stopped (${e.subtype}).`);
-            return { outcome: 'done', text: e.text };
-          }
-        }
-      }
-    } finally {
-      signal.removeEventListener('abort', stop);
     }
   }
 

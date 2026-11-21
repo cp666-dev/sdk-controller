@@ -14,7 +14,6 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { Script } from 'node:vm';
-import { createClaudeBridge } from './claude.mjs';
 
 const PORT = Number(process.env.SDK_CONTROLLER_PORT ?? 8795);
 // Where Share to Universe sends an Add On for review (sdk-controller-share).
@@ -182,10 +181,8 @@ async function listFiles(root, dir = root, out = []) {
   return out;
 }
 
-export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.execPath, runner = run, shareUrl = SHARE_URL, fetchImpl = fetch, checkPage = true, port = PORT, claude = {} } = {}) {
+export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.execPath, runner = run, shareUrl = SHARE_URL, fetchImpl = fetch, checkPage = true, port = PORT } = {}) {
   let listening = null;
-  // The port the helper really listens on, which Claude Code's MCP config has to name.
-  const bridge = createClaudeBridge({ port: () => listening?.address()?.port ?? port, ...claude });
   const sharedFile = join(workspace, SHARED);
   const readShared = async () => (existsSync(sharedFile) ? JSON.parse(await readFile(sharedFile, 'utf8')) : {});
 
@@ -317,7 +314,6 @@ export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.
     },
   };
 
-  Object.assign(routes, bridge.routes);
 
   const readJsonBody = async (req) => {
     let size = 0;
@@ -347,15 +343,6 @@ export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.
       return answer(204, undefined, { ...cors, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '600' });
     }
     if (req.method === 'GET' && req.url === '/health') return answer(200, { ok: true, workspace, sdk: existsSync(cli) }, cors);
-    // Claude Code reaches the MCP endpoint from this Mac, with no Origin; its token names the turn.
-    if (req.url.startsWith('/mcp/')) {
-      if (origin !== undefined) return answer(403, { error: 'Not for pages.' });
-      try {
-        if (await bridge.handleMcp(req, res, () => readJsonBody(req))) return undefined;
-      } catch (e) {
-        return answer(400, { error: e?.message ?? String(e) });
-      }
-    }
 
     const route = req.method === 'POST' ? routes[req.url] : undefined;
     if (!route) return answer(404, { error: 'Not found.' }, cors);

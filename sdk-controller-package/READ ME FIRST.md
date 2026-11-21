@@ -4,9 +4,8 @@ A chat panel inside LUNA. Type what you want, like "turn the drums down 3 dB" or
 to a reverb", check what it's about to change, and press GO. It can also build you small tools
 for LUNA while you work.
 
-It starts on Google Gemini, which is free: you only need a Google account, no card. If you pay for
-Claude Pro or Max, it can use that plan instead, with no key. You can also use Groq (free), a
-Claude or OpenAI API key, or another model, in Settings.
+It starts on Google Gemini, which is free: you only need a Google account, no card. You can switch
+to Groq (also free), a Claude or OpenAI API key, or another model, in Settings.
 
 ## You need
 

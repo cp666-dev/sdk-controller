@@ -3,7 +3,6 @@
 // long it took. Costs a little: a handful of requests per prompt.
 //   ANTHROPIC_API_KEY=... node check/rehearse.mjs                 Claude, the panel's default model
 //   PROVIDER=google GEMINI_API_KEY=... node check/rehearse.mjs       the free default
-//   PROVIDER=claude node check/rehearse.mjs                            your Claude plan, through the running helper
 //   PROVIDER=openai OPENAI_API_KEY=... MODEL=gpt-5 node check/rehearse.mjs
 //   node check/rehearse.mjs "your prompt" "another"               your own prompts
 import { Luna } from '@uaudio/luna-builder-sdk';
@@ -17,7 +16,6 @@ if (process.env.BUILD_HELPER) {
   globalThis.SDC_HELPER_URL = process.env.BUILD_HELPER;
   await import('../builder.js');
 }
-await import('../claude-subscription.js');
 const TOOLS = [...globalThis.AddOnLogic.TOOLS, ...(globalThis.Builder?.TOOLS ?? [])];
 const SYSTEM = [globalThis.AddOnLogic.SYSTEM_PROMPT, globalThis.Builder?.SYSTEM_PROMPT].filter(Boolean).join('\n\n');
 const { PROVIDERS } = globalThis.Providers;
@@ -53,7 +51,7 @@ const session = await luna.session();
 
 const marks = [];
 const agent = new globalThis.AgentCore.Agent({
-  provider: () => (p.agentic ? { ...p, model: process.env.MODEL ?? '' } : { stream: p.stream, apiKey, baseUrl: process.env.BASE_URL, model }),
+  provider: () => ({ stream: p.stream, apiKey, baseUrl: process.env.BASE_URL, model }),
   system: () => SYSTEM,
   tools: TOOLS,
   execute: (calls) => globalThis.AddOnLogic.execute({ luna, session, marks }, calls),

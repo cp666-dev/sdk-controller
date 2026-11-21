@@ -93,24 +93,9 @@ nodejs.org, then run this installer again. SDK Controller itself is already inst
       [ -n "$ok" ] || fail "The helper didn't start. Its log is in ~/Library/Logs/SDK Controller."
       echo "Helper: running, and starts when you log in"
     fi
-    # Claude with their own plan runs through Claude Code, Anthropic's app for this Mac.
-    say "If you pay for Claude Pro or Max, SDK Controller can use that plan instead of an API key."
-    if ask "Use your Claude plan?"; then
-      CLAUDE=""
-      for c in "$(command -v claude || true)" "$HOME/.local/bin/claude" /opt/homebrew/bin/claude /usr/local/bin/claude; do
-        [ -n "$c" ] && [ -x "$c" ] && { CLAUDE="$c"; break; }
-      done
-      if [ -n "$CLAUDE" ]; then
-        echo "Claude Code: already installed"
-      elif ask "Install Claude Code from claude.ai now? It's Anthropic's official installer."; then
-        curl -fsSL https://claude.ai/install.sh | bash || fail "Claude Code didn't install. Install it from claude.com/claude-code, then run this again."
-        echo "Claude Code: installed"
-      fi
-      say "In the panel's Settings, choose Claude (your subscription) and press SIGN IN TO CLAUDE."
-    fi
   fi
 fi
 
-say "Done. In LUNA, open Add Ons > Windows > SDK Controller. Sign in to Claude in its Settings,
-or choose another provider there. Press Return to close."
+say "Done. In LUNA, open Add Ons > Windows > SDK Controller, open Settings, press GET A FREE KEY
+(or choose another provider) and paste your key. Press Return to close."
 read -r _

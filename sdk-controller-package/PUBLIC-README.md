@@ -5,8 +5,8 @@ your session ("turn the drums down 3 dB", "send the vocal to a reverb"), or desc
 want and it builds the LUNA Add On for you, tests it, installs it, and can share it to
 [UA Universe](https://universe.uaudio.com) with your name on it.
 
-It runs as a window inside LUNA and works with your Claude Pro or Max plan, a free Google Gemini
-key, Groq, a Claude or OpenAI API key, or another OpenAI-compatible model.
+It runs as a window inside LUNA and works with a free Google Gemini key, Groq, a Claude or OpenAI
+API key, or another OpenAI-compatible model.
 
 ## Install
 
@@ -27,7 +27,7 @@ installer downloads Universal Audio's LUNA Builder SDK for you.
 | Folder | What it is |
 |---|---|
 | `sdk-controller/` | The Add On: the chat window, the session tools and the model providers. |
-| `sdk-controller-helper/` | A small local helper that lets it build Add Ons (a page can't write files), and runs Claude Code for the Claude plan option. |
+| `sdk-controller-helper/` | A small local helper that lets it build Add Ons (a page can't write files). |
 | `sdk-controller-package/` | The installer, the uninstaller and the scripts that build the release. |
 
 Releases carry `SDK-Controller.lunaaddon`, which UA Universe and LUNA install, and the installer

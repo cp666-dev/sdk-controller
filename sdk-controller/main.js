@@ -12,12 +12,11 @@ let session = null;
 // LUNA's undo position at the start of each request, so "undo that" can go back exactly.
 let marks = [];
 const apiKeys = {};
-let claudeStatus = null; // the helper's last answer about Claude Code, for the subscription provider
 const settings = loadSettings();
 
 function loadSettings() {
-  // A first install starts on Claude with the user's own plan: no key to find.
-  const fallback = { provider: 'claude', autoApprove: false, models: {}, autoModels: {}, baseUrls: {} };
+  // A first install starts on the free provider.
+  const fallback = { provider: 'google', autoApprove: false, models: {}, autoModels: {}, baseUrls: {} };
   try {
     const saved = { ...fallback, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') };
     if (!PROVIDERS[saved.provider]) saved.provider = fallback.provider;
@@ -69,8 +68,7 @@ function paintState() {
   const problem = missingSetup();
   let state = 'ready';
   let word = 'READY';
-  const model = PROVIDERS[id].agentic ? `Claude${claudeStatus?.subscription ? ` ${claudeStatus.subscription}` : ''} subscription` : modelFor(id);
-  let detail = `${session?.name.value ?? 'No session open'} · ${model}`;
+  let detail = `${session?.name.value ?? 'No session open'} · ${modelFor(id)}`;
   if (!connected) {
     [state, word, detail] = ['offline', 'OFFLINE', luna ? 'Reconnecting to LUNA' : 'Waiting for LUNA'];
   } else if (panelState.waitingForApproval) {
@@ -143,7 +141,6 @@ const tools = [...AddOnLogic.TOOLS, ...Builder.TOOLS];
 const agent = new AgentCore.Agent({
   provider() {
     const id = settings.provider;
-    if (PROVIDERS[id].agentic) return { ...PROVIDERS[id], model: settings.models[id] || '' };
     return { stream: PROVIDERS[id].stream, apiKey: apiKeys[id], baseUrl: settings.baseUrls[id], model: modelFor(id) };
   },
   system: () => `${AddOnLogic.SYSTEM_PROMPT}\n\n${Builder.SYSTEM_PROMPT}`,
@@ -219,13 +216,6 @@ function setWorking(working) {
 function missingSetup() {
   const id = settings.provider;
   const p = PROVIDERS[id];
-  if (p.agentic) {
-    if (!claudeStatus) return 'Checking Claude...';
-    if (claudeStatus.helperProblem) return 'Claude runs through SDK Controller\'s helper, which isn\'t running. Open Settings and press GET THE BUILDER.';
-    if (!claudeStatus.installed) return 'Couldn\'t find Claude Code. Open Settings for what to check.';
-    if (!claudeStatus.loggedIn) return 'Sign in to Claude in Settings to start.';
-    return null;
-  }
   if (!modelFor(id)) return 'Choose a model in Settings.';
   if (p.needsKey && !apiKeys[id]) return p.free ? 'Get your free key in Settings to start.' : `Add your ${p.label} API key in Settings.`;
   if (p.needsBaseUrl && !settings.baseUrls[id]) return 'Set the base URL in Settings.';
@@ -280,15 +270,7 @@ async function send(text) {
     else if (result.outcome === 'turn-limit') message('error', `Stopped after ${AgentCore.MAX_TURNS} rounds of tools. Ask it to continue if it was getting somewhere.`);
     else if (result.outcome === 'stopped') message('note', 'Stopped. Steps that had already run are still in the session; undo removes them.');
   } catch (e) {
-    const text = e?.message ?? String(e);
-    // Claude Code can say it is signed in while its sign-in has lapsed: offer the sign-in again.
-    if (PROVIDERS[settings.provider].agentic && /authenticat|oauth|log ?in|sign ?in/i.test(text)) {
-      claudeStatus = { ...(claudeStatus ?? {}), installed: true, loggedIn: false };
-      message('error', 'Your Claude sign-in has expired. Open Settings and press SIGN IN TO CLAUDE, then send that again.');
-      paintState();
-    } else {
-      message('error', text);
-    }
+    message('error', e?.message ?? String(e));
   } finally {
     for (const row of rows.values()) row.classList.remove('running');
     setWorking(false);
@@ -350,8 +332,6 @@ function paintSettings() {
   $('auto-approve').checked = settings.autoApprove;
   $('key-help').textContent = p.keyHelp ?? '';
   $('get-key').hidden = !p.keyUrl;
-  $('claude-login').hidden = !p.agentic || claudeStatus?.loggedIn === true || claudeStatus?.installed === false;
-  for (const el of [$('api-key'), $('save-key'), $('delete-key')]) (el.closest('label') ?? el).hidden = Boolean(p.agentic);
 
   $('get-key').textContent = p.free ? 'GET A FREE KEY' : 'GET A KEY';
   $('get-key').classList.toggle('is-on', !apiKeys[id]);
@@ -400,43 +380,23 @@ function paintModels() {
   const id = settings.provider;
   const p = PROVIDERS[id];
   const select = $('model');
-  const fixed = p.agentic ? p.models : null;
-  const current = p.agentic ? settings.models[id] ?? '' : modelFor(id);
+  const current = modelFor(id);
   const listed = providerModels[id]?.length ? providerModels[id] : p.models ?? [];
-  const options = fixed ?? [...new Set([...listed, current].filter(Boolean))].map((m) => [m, m]);
+  const options = [...new Set([...listed, current].filter(Boolean))].map((m) => [m, m]);
   select.innerHTML = '';
   for (const [value, label] of options) {
     const option = document.createElement('option');
     option.value = value;
-    option.textContent = value === modelFor(id) && !p.agentic && value === settings.autoModels[id] ? `${label} (recommended)` : label;
+    option.textContent = value === settings.autoModels[id] ? `${label} (recommended)` : label;
     select.appendChild(option);
   }
   select.value = current;
-  select.disabled = options.length <= 1 && !p.agentic;
+  select.disabled = options.length <= 1;
   // A server of the user's own may not list its models: let them type the name instead.
   const typed = Boolean(p.needsBaseUrl) && !(providerModels[id]?.length);
   select.hidden = typed;
   $('model-custom').hidden = !typed;
   $('model-custom').value = typed ? settings.models[id] ?? '' : '';
-}
-
-async function refreshClaude() {
-  try {
-    claudeStatus = await PROVIDERS.claude.status();
-  } catch (e) {
-    // The helper didn't answer: say that, not that Claude Code is missing.
-    claudeStatus = { installed: null, loggedIn: false, helperProblem: e.message };
-  }
-  if (settings.provider === 'claude' && !$('settings').hidden) {
-    paintSettings();
-    $('key-note').textContent = claudeStatus.helperProblem
-      ? claudeStatus.helperProblem
-      : claudeStatus.error ? claudeStatus.error
-      : !claudeStatus.installed ? 'Couldn\'t find Claude Code on this Mac. If you have it, open Terminal and run "claude --version" to check it works, then reopen this window. If not, run Install SDK Controller again and say yes to Claude.'
-        : claudeStatus.loggedIn ? `Signed in${claudeStatus.subscription ? ` with Claude ${claudeStatus.subscription}` : ''}. You're ready.`
-          : 'Press SIGN IN TO CLAUDE, approve it in your browser, then come back here.';
-  }
-  paintState();
 }
 
 async function openExternal(url) {
@@ -458,20 +418,6 @@ for (const [id, p] of Object.entries(PROVIDERS)) {
 
 $('settings-toggle').onclick = () => toggleSettings();
 $('get-builder').onclick = () => void openExternal(BUILDER_URL);
-$('claude-login').onclick = async () => {
-  $('key-note').textContent = 'Opening Claude in your browser...';
-  try {
-    await PROVIDERS.claude.login();
-  } catch (e) {
-    $('key-note').textContent = e.message;
-    return;
-  }
-  // Watch for the sign-in to finish, for two minutes.
-  for (let i = 0; i < 40 && !claudeStatus?.loggedIn; i++) {
-    await new Promise((r) => setTimeout(r, 3000));
-    await refreshClaude();
-  }
-};
 $('get-key').onclick = () => void openExternal(PROVIDERS[settings.provider].keyUrl);
 $('provider').onchange = async () => {
   settings.provider = $('provider').value;
@@ -479,8 +425,7 @@ $('provider').onchange = async () => {
   await loadKey(settings.provider);
   paintSettings();
   paintState();
-  if (PROVIDERS[settings.provider].agentic) void refreshClaude();
-  else void refreshModels();
+  void refreshModels();
 };
 $('model-custom').onchange = () => {
   settings.models[settings.provider] = $('model-custom').value.trim();
@@ -690,7 +635,6 @@ async function connect() {
   });
   await loadKey(settings.provider);
   void refreshModels();
-  void refreshClaude();
   await bindSession();
   if (missingSetup()) toggleSettings(true);
 }
