@@ -11,28 +11,62 @@
 //   /claude/stop        { turnId }
 // Claude Code side: an MCP server at /mcp/<token>, one token per turn.
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const POLL_WAIT = 20000;
 const KEEP_DONE = 10 * 60 * 1000;
 
 class Refused extends Error {}
 
-/** Claude Code's CLI: the one on PATH, else where its installers put it. */
-export function findClaude(env = process.env) {
-  const candidates = [
-    ...(env.PATH ?? '').split(':').filter(Boolean).map((dir) => join(dir, 'claude')),
-    join(homedir(), '.local/bin/claude'),
-    join(homedir(), '.claude/local/claude'),
-    '/opt/homebrew/bin/claude',
-    '/usr/local/bin/claude',
+/** Every Node version nvm has, newest first, as bin folders. */
+function nvmBins(home) {
+  const root = join(home, '.nvm/versions/node');
+  try {
+    return readdirSync(root).sort((a, b) => b.localeCompare(a, undefined, { numeric: true })).map((v) => join(root, v, 'bin'));
+  } catch {
+    return [];
+  }
+}
+
+/** Ask the user's own login shell, which reads their .zshrc or .zprofile as Terminal does. */
+function fromLoginShell(env) {
+  for (const shell of ['/bin/zsh', '/bin/bash']) {
+    try {
+      const out = execFileSync(shell, ['-lic', 'command -v claude'], { env: { HOME: env.HOME ?? homedir(), USER: env.USER, PATH: '/usr/bin:/bin:/usr/sbin:/sbin' }, timeout: 8000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const path = out.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('/')).pop();
+      if (path && existsSync(path)) return path;
+    } catch {
+      // That shell couldn't say; try the next.
+    }
+  }
+  return null;
+}
+
+/**
+ * Claude Code's CLI, wherever the user installed it: the helper starts at login without their
+ * shell's PATH, so look where each installer puts it (Anthropic's, Homebrew, npm with nvm, Volta,
+ * Bun, an npm prefix), then ask their login shell, as Terminal would find it.
+ */
+export function findClaude(env = process.env, { home = homedir(), loginShell = fromLoginShell } = {}) {
+  const dirs = [
+    ...(env.PATH ?? '').split(':').filter(Boolean),
+    join(home, '.local/bin'),
+    join(home, '.claude/local'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    ...nvmBins(home),
+    join(home, '.volta/bin'),
+    join(home, '.bun/bin'),
+    join(home, '.npm-global/bin'),
+    join(home, 'Library/pnpm'),
   ];
-  return candidates.find((p) => existsSync(p)) ?? null;
+  const found = dirs.map((dir) => join(dir, 'claude')).find((p) => existsSync(p));
+  return found ?? loginShell(env);
 }
 
 function capture(bin, args, { env, timeout = 20000 }) {
@@ -47,7 +81,10 @@ function capture(bin, args, { env, timeout = 20000 }) {
   });
 }
 
-export function createClaudeBridge({ port, claudeBin = findClaude(), spawnImpl = spawn, baseEnv = process.env } = {}) {
+export function createClaudeBridge({ port, claudeBin: givenBin, find = findClaude, spawnImpl = spawn, baseEnv = process.env } = {}) {
+  // Looked up again until found, so installing Claude Code later works without a restart.
+  let claudeBin = givenBin ?? null;
+  const locate = () => (claudeBin ??= find(baseEnv));
   const portOf = typeof port === 'function' ? port : () => port;
   const turns = new Map();
   const byToken = new Map();
@@ -58,6 +95,8 @@ export function createClaudeBridge({ port, claudeBin = findClaude(), spawnImpl =
     delete e.ANTHROPIC_API_KEY;
     delete e.ANTHROPIC_AUTH_TOKEN;
     // Approvals can take as long as the user takes: never time a tool call out or background it.
+    // An npm-installed claude is a Node script: its own folder holds the node it needs.
+    if (claudeBin) e.PATH = [dirname(claudeBin), e.PATH].filter(Boolean).join(':');
     return { ...e, MCP_TOOL_TIMEOUT: '86400000', CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT: '0', CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS: '0' };
   };
 
@@ -96,6 +135,7 @@ export function createClaudeBridge({ port, claudeBin = findClaude(), spawnImpl =
   }
 
   async function startTurn({ text, system, tools, sessionId, model }) {
+    locate();
     if (!claudeBin) throw new Refused('Claude Code is not installed. Run Install SDK Controller again and choose to set up Claude.');
     if (typeof text !== 'string' || !text.trim()) throw new Refused('Nothing to send.');
     if (!Array.isArray(tools)) throw new Refused('tools is required.');
@@ -146,7 +186,7 @@ export function createClaudeBridge({ port, claudeBin = findClaude(), spawnImpl =
 
   const routes = {
     async '/claude/status'() {
-      if (!claudeBin) return { installed: false, loggedIn: false };
+      if (!locate()) return { installed: false, loggedIn: false };
       const r = await capture(claudeBin, ['auth', 'status', '--json'], { env: env() });
       try {
         const s = JSON.parse(r.out.slice(r.out.indexOf('{')));
@@ -156,7 +196,7 @@ export function createClaudeBridge({ port, claudeBin = findClaude(), spawnImpl =
       }
     },
     async '/claude/login'() {
-      if (!claudeBin) throw new Refused('Claude Code is not installed.');
+      if (!locate()) throw new Refused('Claude Code is not installed.');
       // Opens the browser; Claude Code finishes the sign-in when the user approves it there.
       const child = spawnImpl(claudeBin, ['auth', 'login', '--claudeai'], { env: env(), stdio: 'ignore', detached: true });
       child.unref?.();

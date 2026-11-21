@@ -2,7 +2,7 @@
     "package_name": "SDK Controller",
     "id": "com.cp.sdkcontroller",
     "title": "SDK Controller",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "manufacturer": "CP",
     "description": "Build and edit in LUNA by chatting. Ask it to change your session, or describe a tool and it builds the Add On for you, then share it to UA Universe. Works with a free Google Gemini key, or Claude, OpenAI and other models.",
     "categories": [

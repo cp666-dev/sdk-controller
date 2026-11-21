@@ -221,7 +221,8 @@ function missingSetup() {
   const p = PROVIDERS[id];
   if (p.agentic) {
     if (!claudeStatus) return 'Checking Claude...';
-    if (!claudeStatus.installed) return 'Claude Code is not on this Mac. Run the installer again and choose Claude.';
+    if (claudeStatus.helperProblem) return 'Claude runs through SDK Controller\'s helper, which isn\'t running. Open Settings and press GET THE BUILDER.';
+    if (!claudeStatus.installed) return 'Couldn\'t find Claude Code. Open Settings for what to check.';
     if (!claudeStatus.loggedIn) return 'Sign in to Claude in Settings to start.';
     return null;
   }
@@ -423,13 +424,15 @@ async function refreshClaude() {
   try {
     claudeStatus = await PROVIDERS.claude.status();
   } catch (e) {
-    claudeStatus = { installed: false, loggedIn: false, error: e.message };
+    // The helper didn't answer: say that, not that Claude Code is missing.
+    claudeStatus = { installed: null, loggedIn: false, helperProblem: e.message };
   }
   if (settings.provider === 'claude' && !$('settings').hidden) {
     paintSettings();
-    $('key-note').textContent = claudeStatus.error
-      ? claudeStatus.error
-      : !claudeStatus.installed ? 'Claude Code is not on this Mac. Run Install SDK Controller again and say yes to Claude.'
+    $('key-note').textContent = claudeStatus.helperProblem
+      ? claudeStatus.helperProblem
+      : claudeStatus.error ? claudeStatus.error
+      : !claudeStatus.installed ? 'Couldn\'t find Claude Code on this Mac. If you have it, open Terminal and run "claude --version" to check it works, then reopen this window. If not, run Install SDK Controller again and say yes to Claude.'
         : claudeStatus.loggedIn ? `Signed in${claudeStatus.subscription ? ` with Claude ${claudeStatus.subscription}` : ''}. You're ready.`
           : 'Press SIGN IN TO CLAUDE, approve it in your browser, then come back here.';
   }

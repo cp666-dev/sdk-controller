@@ -85,3 +85,25 @@ describe('Claude with the user\'s subscription', () => {
     assert.equal(r2.status, 404);
   });
 });
+
+describe('finding Claude Code', async () => {
+  const { findClaude } = await import('../claude.mjs');
+  const { mkdtemp: tmp, mkdir: md, writeFile: wf, chmod } = await import('node:fs/promises');
+
+  it('finds an npm install under nvm, which the helper\'s login PATH never includes', async () => {
+    const home = await tmp(join(tmpdir(), 'home-'));
+    const bin = join(home, '.nvm/versions/node/v22.11.0/bin');
+    await md(bin, { recursive: true });
+    await wf(join(bin, 'claude'), '#!/usr/bin/env node');
+    await chmod(join(bin, 'claude'), 0o755);
+    assert.equal(findClaude({ PATH: '/usr/bin:/bin' }, { home, loginShell: () => null }), join(bin, 'claude'));
+  });
+
+  it('asks the login shell when no known folder has it', () => {
+    assert.equal(findClaude({ PATH: '/usr/bin:/bin' }, { home: '/nonexistent', loginShell: () => '/somewhere/claude' }), '/somewhere/claude');
+  });
+
+  it('says not found rather than guessing', () => {
+    assert.equal(findClaude({ PATH: '/usr/bin:/bin' }, { home: '/nonexistent', loginShell: () => null }), null);
+  });
+});
