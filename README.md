@@ -2,8 +2,9 @@
 
 Build and edit in [LUNA](https://www.uaudio.com/luna) by chatting. Ask SDK Controller to change
 your session ("turn the drums down 3 dB", "send the vocal to a reverb"), or describe a tool you
-want and it builds the LUNA Add On for you, tests it, installs it, and can share it to
-[UA Universe](https://universe.uaudio.com) with your name on it.
+want and it builds the LUNA Add On for you, tests it, installs it, and shares it to
+[UA Universe](https://universe.uaudio.com) with your name on it: for you with no account, from
+your own GitHub account, or with step-by-step help making one.
 
 It runs as a window inside LUNA and works with a free Google Gemini key, Groq, a Claude or OpenAI
 API key, or another OpenAI-compatible model.
@@ -27,7 +28,7 @@ installer downloads Universal Audio's LUNA Builder SDK for you.
 | Folder | What it is |
 |---|---|
 | `sdk-controller/` | The Add On: the chat window, the session tools and the model providers. |
-| `sdk-controller-helper/` | A small local helper that lets it build Add Ons (a page can't write files). |
+| `sdk-controller-helper/` | A small local helper that lets it build Add Ons (a page can't write files) and publish them to your GitHub. |
 | `sdk-controller-package/` | The installer, the uninstaller and the scripts that build the release. |
 
 Releases carry `SDK-Controller.lunaaddon`, which UA Universe and LUNA install, and the installer
@@ -39,6 +40,8 @@ Requests go straight from SDK Controller to the provider you choose, with the se
 reads. Keys stay in your Mac's keychain. Edits to your session wait for your GO unless you turn
 that off; deletes always ask. Add Ons it builds run their tests on your Mac and install only
 once those pass.
+
+Release notes: `sdk-controller/CHANGELOG.md`.
 
 ## Notices
 

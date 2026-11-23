@@ -15,6 +15,11 @@ ZIP="$REPO/dist/SDK-Controller-$VERSION.zip"
 cp "$ADDON" "$REPO/dist/SDK-Controller.lunaaddon"
 echo "Release v$VERSION to $TARGET: SDK-Controller.lunaaddon, $(basename "$ZIP")"
 [ "${1:-}" = "--dry-run" ] && { echo "Dry run: nothing published."; exit 0; }
+# The notes are this version's section of sdk-controller/CHANGELOG.md, then how to install.
+NOTES="$(awk -v v="## $VERSION" '$0==v{on=1;next} /^## /{on=0} on' "$REPO/sdk-controller/CHANGELOG.md")"
+[ -n "$NOTES" ] || { echo "sdk-controller/CHANGELOG.md has no \"## $VERSION\" section"; exit 1; }
+NOTES="$NOTES
+
+Install from UA Universe, or download $(basename "$ZIP") for the installer with the Add On builder."
 gh release create "v$VERSION" "$REPO/dist/SDK-Controller.lunaaddon" "$ZIP" --repo "$TARGET" \
-  --title "SDK Controller $VERSION" \
-  --notes "Chat with an AI model inside LUNA to edit your session and build Add Ons. Install from UA Universe, or download $(basename "$ZIP") for the installer with the Add On builder."
+  --title "SDK Controller $VERSION" --notes "$NOTES"

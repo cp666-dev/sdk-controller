@@ -14,11 +14,15 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { Script } from 'node:vm';
+import { createGitHubUser } from './github-user.mjs';
 
 const PORT = Number(process.env.SDK_CONTROLLER_PORT ?? 8795);
 // Where Share to Universe sends an Add On for review (sdk-controller-share).
 const SHARE_URL = (process.env.SDK_CONTROLLER_SHARE_URL ?? 'https://sdk-controller-share.fly.dev').replace(/\/+$/, '');
 const SHARED = '.shared.json';
+// SDK Controller's GitHub OAuth app (owned by cp666-dev, device flow on, tokens that don't expire),
+// for "Use my GitHub account". A client id is public: it only names the app on GitHub's sign-in page.
+const GITHUB_CLIENT_ID = process.env.SDK_CONTROLLER_GITHUB_CLIENT_ID ?? 'Ov23liSunta4Zy7RcaZa';
 // The LUNA Builder SDK: SDK_CONTROLLER_SDK, else one the user installed themselves, else the copy
 // SDK Controller's installer downloads from UA's public release (its ua-luna-builder plugin folder,
 // with the repository's docs). The CLI is dist/cli.js in the first layout and sdk/cli.js in the second.
@@ -181,10 +185,28 @@ async function listFiles(root, dir = root, out = []) {
   return out;
 }
 
-export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.execPath, runner = run, shareUrl = SHARE_URL, fetchImpl = fetch, checkPage = true, port = PORT } = {}) {
+export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.execPath, runner = run, shareUrl = SHARE_URL, fetchImpl = fetch, checkPage = true, port = PORT, githubClientId = GITHUB_CLIENT_ID, githubFetch = fetch, githubUrls = {} } = {}) {
   let listening = null;
   const sharedFile = join(workspace, SHARED);
   const readShared = async () => (existsSync(sharedFile) ? JSON.parse(await readFile(sharedFile, 'utf8')) : {});
+  const writeShared = (shared) => writeFile(sharedFile, JSON.stringify(shared, null, 2));
+
+  /** The Add On packed as LUNA installs it. Pack checks the manifest and every script the page loads. */
+  async function packAddOn(folder) {
+    const root = folderPath(workspace, folder);
+    if (!existsSync(root)) throw new Refused(`There is no Add On called ${folder}.`);
+    const dir = await mkdtemp(join(tmpdir(), 'sdc-share-'));
+    try {
+      const out = join(dir, 'addon.lunaaddon');
+      const packed = await runner(node, [cli, 'pack', root, '--out', out], { cwd: root, timeout: 60000 });
+      if (!packed.ok) throw new Refused(`It could not be packed for sharing:\n${packed.output}`);
+      return await readFile(out);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  const github = createGitHubUser({ clientId: githubClientId, fetchImpl: githubFetch, packAddOn, readShared, writeShared, ...githubUrls });
 
   async function toShare(path, init) {
     let response;
@@ -280,31 +302,24 @@ export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.
       if (!existsSync(root)) throw new Refused(`There is no Add On called ${folder}.`);
       if (typeof builderName !== 'string' || !builderName.trim()) throw new Refused('Add your name, so the listing can credit you.');
       if (agreed !== true) throw new Refused('Agree to the sharing terms first.');
-      const dir = await mkdtemp(join(tmpdir(), 'sdc-share-'));
-      try {
-        const out = join(dir, 'addon.lunaaddon');
-        // Pack checks the manifest and that every script and stylesheet the page loads is there.
-        const packed = await runner(node, [cli, 'pack', root, '--out', out], { cwd: root, timeout: 60000 });
-        if (!packed.ok) throw new Refused(`It could not be packed for sharing:\n${packed.output}`);
-        const addOn = (await readFile(out)).toString('base64');
-        const submission = await toShare('/submissions', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ addOn, builderName, title, description, categories, agreed, origin: { builderKey, sdkController: '1.0.0' } }),
-        });
-        const shared = await readShared();
-        shared[folder] = { id: submission.id, title: submission.title, submittedAt: submission.submittedAt };
-        await writeFile(sharedFile, JSON.stringify(shared, null, 2));
-        return submission;
-      } finally {
-        await rm(dir, { recursive: true, force: true });
-      }
+      const addOn = (await packAddOn(folder)).toString('base64');
+      const submission = await toShare('/submissions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ addOn, builderName, title, description, categories, agreed, origin: { builderKey, sdkController: '2.0.0' } }),
+      });
+      const shared = await readShared();
+      shared[folder] = { ...(shared[folder] ?? {}), id: submission.id, title: submission.title, submittedAt: submission.submittedAt };
+      await writeShared(shared);
+      return submission;
     },
     async '/share-status'({ folder }) {
       folderPath(workspace, folder);
       const entry = (await readShared())[folder];
       if (!entry) return { shared: false };
-      return { shared: true, ...(await toShare(`/submissions/${entry.id}`, {})) };
+      // Shared for them (a submission id), on their own GitHub (github), or both at some point.
+      const community = entry.id ? await toShare(`/submissions/${entry.id}`, {}).catch(() => null) : null;
+      return { shared: true, ...(community ?? {}), github: entry.github ?? null };
     },
     async '/install'({ folder }) {
       const root = folderPath(workspace, folder);
@@ -325,6 +340,8 @@ export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.
     }
     return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
   };
+
+  Object.assign(routes, github.routes);
 
   listening = createServer(async (req, res) => {
     const origin = req.headers.origin;

@@ -27,31 +27,116 @@
     <section class="sdc-settings" id="share" hidden>
       <div class="sdc-share-title">Share to UA Universe</div>
       <div class="sdc-note" id="share-note"></div>
-      <div id="share-form">
-        <label>Add On
+      <div id="share-body" hidden>
+        <label>Which Add On?
           <select id="share-addon"></select>
         </label>
-        <label>Your name, shown on Universe as its builder
-          <input id="share-name" maxlength="60" autocomplete="name" spellcheck="false">
-        </label>
-        <label>Title
-          <input id="share-title" maxlength="60" spellcheck="true">
-        </label>
-        <label>What it does
-          <textarea id="share-description" rows="3" maxlength="400" spellcheck="true"></textarea>
-        </label>
-        <label>Category, where it's listed
-          <select id="share-category"></select>
-        </label>
-        <label class="sdc-check">
-          <input type="checkbox" id="share-agree">
-          I made this and I'm happy for it to be published, and listed on UA Universe for anyone to download, credited to the name above.
-        </label>
-        <div class="sdc-row">
-          <button class="sdc-btn is-on" id="share-send" type="button">SHARE TO UNIVERSE</button>
-          <button class="sdc-btn" id="share-open" type="button" hidden>OPEN ON UNIVERSE</button>
+        <div class="sdc-share-where" id="share-where" hidden></div>
+
+        <div id="share-ways">
+          <div class="sdc-ways-q">How would you like to share it?</div>
+          <div class="sdc-ways" role="radiogroup" aria-label="How to share it">
+            <button class="sdc-way" type="button" role="radio" data-way="community">
+              <span class="sdc-way-tag">Easiest</span>
+              <span class="sdc-way-title">Share it for me</span>
+              <span class="sdc-way-text">No account needed. It goes on the LUNA Universe Community account, with your name on it.</span>
+              <span class="sdc-way-time">About 1 minute</span>
+            </button>
+            <button class="sdc-way" type="button" role="radio" data-way="github">
+              <span class="sdc-way-tag">Yours to keep</span>
+              <span class="sdc-way-title">Use my GitHub account</span>
+              <span class="sdc-way-text">It goes on your own GitHub, so it's yours to update. You approve SDK Controller on GitHub once.</span>
+              <span class="sdc-way-time">About 5 minutes</span>
+            </button>
+            <button class="sdc-way" type="button" role="radio" data-way="newgithub">
+              <span class="sdc-way-tag">New to GitHub</span>
+              <span class="sdc-way-title">Help me make a GitHub account</span>
+              <span class="sdc-way-text">We walk you through making a free account step by step, then share it from there.</span>
+              <span class="sdc-way-time">About 10 minutes</span>
+            </button>
+          </div>
         </div>
-        <div class="sdc-note" id="share-status" aria-live="polite"></div>
+
+        <div class="sdc-flow" id="share-flow" hidden>
+          <div class="sdc-flow-head">
+            <button class="sdc-link" id="share-change-way" type="button">&#8592; Choose a different way</button>
+            <span class="sdc-flow-way" id="share-flow-way"></span>
+          </div>
+          <ol class="sdc-stepper" id="share-stepper"></ol>
+
+          <div class="sdc-stepcard" data-step="account" hidden>
+            <div class="sdc-step-h">Make your free GitHub account</div>
+            <ol class="sdc-howto">
+              <li>Press <b>OPEN GITHUB SIGN-UP</b>. It opens in your browser.</li>
+              <li>Enter an <b>email you can open right now</b>: GitHub sends a code to it.</li>
+              <li>Make a <b>password</b>, then pick a <b>username</b>. It appears on your Add On's page, like github.com/<i>yourname</i>, so choose one you're happy to show.</li>
+              <li>Solve GitHub's quick puzzle, type in the <b>code from your email</b>, then skip anything optional. The free plan is all you need.</li>
+            </ol>
+            <div class="sdc-row"><button class="sdc-btn is-on" id="share-open-signup" type="button">OPEN GITHUB SIGN-UP</button></div>
+            <label class="sdc-check"><input type="checkbox" id="share-account-done"> I've made my account and typed in the code from my email.</label>
+            <div class="sdc-row"><button class="sdc-btn is-on sdc-next" id="share-account-next" type="button" disabled>NEXT</button></div>
+          </div>
+
+          <div class="sdc-stepcard" data-step="connect" hidden>
+            <div class="sdc-step-h">Connect your GitHub account</div>
+            <div id="share-connect-start">
+              <p class="sdc-note">SDK Controller shows you a short code. You type it on GitHub and press <b>Authorize</b>. Your password never comes here, and you can disconnect at any time.</p>
+              <div class="sdc-row"><button class="sdc-btn is-on" id="share-connect" type="button">CONNECT GITHUB</button></div>
+            </div>
+            <div id="share-connect-code" hidden>
+              <p class="sdc-note">Your code:</p>
+              <div class="sdc-code" id="share-code" aria-live="polite"></div>
+              <div class="sdc-row"><button class="sdc-btn is-on" id="share-copy-open" type="button">COPY CODE AND OPEN GITHUB</button></div>
+              <ol class="sdc-howto">
+                <li>On the GitHub page, sign in if it asks, then paste the code and press <b>Continue</b>.</li>
+                <li>Press <b>Authorize</b>.</li>
+                <li>Come back here. This moves on by itself.</li>
+              </ol>
+              <div class="sdc-wait"><span class="sdc-busy-led"></span><span id="share-connect-wait">Waiting for you on GitHub...</span></div>
+            </div>
+            <div id="share-connect-done" hidden>
+              <div class="sdc-ok-line" id="share-connected-as"></div>
+              <div class="sdc-row">
+                <button class="sdc-btn is-on sdc-next" id="share-connect-next" type="button">NEXT</button>
+                <button class="sdc-link" id="share-disconnect" type="button">Use a different GitHub account</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="sdc-stepcard" data-step="details" hidden>
+            <div class="sdc-step-h">Describe it</div>
+            <label>Your name, shown as its maker
+              <input id="share-name" maxlength="60" autocomplete="name" spellcheck="false">
+            </label>
+            <label>Title
+              <input id="share-title" maxlength="60" spellcheck="true">
+            </label>
+            <label>What it does, in a sentence or two
+              <textarea id="share-description" rows="3" maxlength="400" spellcheck="true"></textarea>
+            </label>
+            <label>Category, where people will find it
+              <select id="share-category"></select>
+            </label>
+            <label class="sdc-check"><input type="checkbox" id="share-agree"> <span id="share-agree-text"></span></label>
+            <div class="sdc-row"><button class="sdc-btn is-on sdc-next" id="share-send" type="button">SHARE IT</button></div>
+          </div>
+
+          <div class="sdc-stepcard" data-step="done" hidden>
+            <div class="sdc-step-h" id="share-done-h">Shared</div>
+            <div class="sdc-note" id="share-done-text"></div>
+            <div class="sdc-row"><button class="sdc-btn" id="share-open" type="button" hidden>OPEN UA UNIVERSE</button></div>
+          </div>
+
+          <div class="sdc-stepcard" data-step="universe" hidden>
+            <div class="sdc-step-h">Put it on UA Universe</div>
+            <div class="sdc-ok-line" id="share-published"></div>
+            <p class="sdc-note">Four quick things on UA Universe. The first three are one time only: next time you just share.</p>
+            <ol class="sdc-checklist" id="share-checklist"></ol>
+            <div class="sdc-ok-line" id="share-all-done" hidden>That's everything. UA checks it, then it appears in Discover and in LUNA. To update it later, share again the same way.</div>
+          </div>
+
+          <div class="sdc-share-msg" id="share-msg" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 
@@ -128,5 +213,6 @@
   <script src="logic.js"></script>
   <script src="builder.js"></script>
   <script src="main.js"></script>
+  <script src="share.js"></script>
 </body>
 </html>

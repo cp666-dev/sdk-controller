@@ -17,6 +17,7 @@ never lists, reads, writes or installs it.
 |---|---|
 | `SDK_CONTROLLER_WORKSPACE` | `~/LUNA Built Add Ons` |
 | `SDK_CONTROLLER_PORT` | `8795` (the panel expects this one) |
+| `SDK_CONTROLLER_GITHUB_CLIENT_ID` | Overrides SDK Controller's GitHub OAuth app (`Ov23liSunta4Zy7RcaZa`, owned by cp666-dev), used for "Use my GitHub account". |
 | `UA_ADDONS_FOLDER` | LUNA's Add Ons folder. Set it when testing, so `install` does not touch the real one. |
 
 ## Limits

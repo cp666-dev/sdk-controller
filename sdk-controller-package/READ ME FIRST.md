@@ -42,9 +42,15 @@ it on a copy of a session first.
 
 ## Share what you build
 
-Press **SHARE** at the top of the window, pick the Add On, add your name, and press **SHARE TO
-UNIVERSE**. No GitHub account needed: it's checked by hand, then published on UA Universe for
-anyone to download, with your name on it. The panel shows when it's live.
+Press **SHARE** at the top of the window, pick the Add On, and choose how:
+
+- **Share it for me:** no account needed. It's published with your name on it and checked by
+  Universal Audio before it appears on UA Universe.
+- **Use my GitHub account:** it goes on your own GitHub, so it's yours to update. You connect
+  GitHub by typing a short code there, then follow four short steps on UA Universe.
+- **Help me make a GitHub account:** step-by-step help making a free account, then the same.
+
+Each way shows its steps and where you are. To update an Add On later, share it again the same way.
 
 ## Good to know
 

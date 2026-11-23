@@ -79,7 +79,7 @@ nodejs.org, then run this installer again. SDK Controller itself is already inst
       echo "LUNA Builder SDK $TAG: installed"
     fi
     mkdir -p "$HELPER_DIR"
-    cp "$FILES/helper/"* "$HELPER_DIR/"
+    cp -R "$FILES/helper/"* "$HELPER_DIR/"
     chmod +x "$HELPER_DIR/"*.sh
     if [ -n "${SDC_NO_LOGIN_ITEM:-}" ]; then
       echo "Helper: copied (login item skipped)"

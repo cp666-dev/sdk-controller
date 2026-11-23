@@ -39,6 +39,7 @@ rm -rf "$STAGE/check" "$STAGE/tests"
 mkdir -p "$DEST/Files/helper"
 # Every module the helper imports, and its scripts: not its tests.
 cp "$WORK/sdk-controller-helper/"*.mjs "$WORK/sdk-controller-helper/"{run.sh,install-login-item.sh,uninstall-login-item.sh} "$DEST/Files/helper/"
+mkdir -p "$DEST/Files/helper/publish" && cp "$WORK/sdk-controller-helper/publish/"*.mjs "$DEST/Files/helper/publish/"
 
 cp "$REPO/sdk-controller-package/Install SDK Controller.command" "$REPO/sdk-controller-package/Uninstall SDK Controller.command" "$DEST/"
 cp "$REPO/sdk-controller-package/READ ME FIRST.md" "$DEST/"

@@ -4,7 +4,9 @@
 // Classic scripts share one global scope, so each file keeps its names to itself.
 (() => {
 // check/rehearse.mjs points this at a test helper with its own folders.
-const HELPER_URL = globalThis.SDC_HELPER_URL ?? 'http://127.0.0.1:8795';
+// In a browser on localhost, ?helper=<port> points at a test helper; never inside LUNA.
+const testPort = location.hostname === 'localhost' ? new URLSearchParams(location.search).get('helper') : null;
+const HELPER_URL = globalThis.SDC_HELPER_URL ?? (testPort && /^\d+$/.test(testPort) ? `http://127.0.0.1:${testPort}` : 'http://127.0.0.1:8795');
 const FOLDER = { type: 'string', description: 'Add On folder name: lowercase letters, numbers and hyphens' };
 const BS = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 
@@ -51,6 +53,10 @@ const Builder = {
 
   share: (details) => helper('/share', details),
   shareStatus: (folder) => helper('/share-status', { folder }),
+  githubStart: () => helper('/github/connect/start', {}),
+  githubPoll: (flowId) => helper('/github/connect/poll', { flowId }),
+  githubUser: (token) => helper('/github/user', { token }),
+  githubPublish: (details) => helper('/github/publish', details),
 
   TOOLS: [
     {
@@ -136,7 +142,7 @@ const Builder = {
     },
   ],
 
-  SYSTEM_PROMPT: `You can also build new LUNA Add Ons with the build_ tools, when the user wants a tool rather than an edit. Read llms.txt and QUICKSTART.md with build_read_docs first, and use only the API they describe; never guess one. Before calling a method or reading a property you have not seen in those guides, check it on its API reference page (api/classes/<Class>.md). The page loads classic scripts: no import or export, use the Luna global. Follow the docs: engine logic in logic.js with tests against Luna.MockEngine, DOM in main.js, a touch around every control the user edits. Then scaffold, write the files, run the tests, fix what fails, and install once they pass. Fill the manifest's description and one or two categories (docs/MANIFEST.md, Categories). Draw the Add On an icon: write icon.svg with viewBox 0 0 512 512, a rounded dark tile with one bold, simple picture of what it does, no text, readable at 64 px. Running the tests turns it into icon.png and sets it as the manifest's icon, which LUNA and UA Universe show. LUNA can report the session changing several times in a row while an Add On opens, so a page's session setup must survive overlapping calls: give each setup a number and stop an older one once a newer one starts, and subscribe everything again on each setup rather than skipping what an earlier one marked as subscribed (a meter that loses its last subscription stops updating). Tests outside LUNA don't show this. Once asked to build, work straight through to an installed Add On: don't stop to ask questions or for confirmation, choose sensible defaults, and say what you chose at the end. Keep what you build small and say where it appears in LUNA. You can change only Add Ons in the builder's own folder. An Add On reaches no web server unless its manifest lists the host in network; prefer ones that need none. When the user wants to share an Add On they built, tell them to press SHARE at the top of this panel: it publishes it to UA Universe, credited to them, after a check.`,
+  SYSTEM_PROMPT: `You can also build new LUNA Add Ons with the build_ tools, when the user wants a tool rather than an edit. Read llms.txt and QUICKSTART.md with build_read_docs first, and use only the API they describe; never guess one. Before calling a method or reading a property you have not seen in those guides, check it on its API reference page (api/classes/<Class>.md). The page loads classic scripts: no import or export, use the Luna global. Follow the docs: engine logic in logic.js with tests against Luna.MockEngine, DOM in main.js, a touch around every control the user edits. Then scaffold, write the files, run the tests, fix what fails, and install once they pass. Fill the manifest's description and one or two categories (docs/MANIFEST.md, Categories). Draw the Add On an icon: write icon.svg with viewBox 0 0 512 512, a rounded dark tile with one bold, simple picture of what it does, no text, readable at 64 px. Running the tests turns it into icon.png and sets it as the manifest's icon, which LUNA and UA Universe show. LUNA can report the session changing several times in a row while an Add On opens, so a page's session setup must survive overlapping calls: give each setup a number and stop an older one once a newer one starts, and subscribe everything again on each setup rather than skipping what an earlier one marked as subscribed (a meter that loses its last subscription stops updating). Tests outside LUNA don't show this. Once asked to build, work straight through to an installed Add On: don't stop to ask questions or for confirmation, choose sensible defaults, and say what you chose at the end. Keep what you build small and say where it appears in LUNA. You can change only Add Ons in the builder's own folder. An Add On reaches no web server unless its manifest lists the host in network; prefer ones that need none. When the user wants to share an Add On they built, tell them to press SHARE at the top of this window: it offers three ways to put it on UA Universe (shared for them with no account, from their own GitHub, or with help making a GitHub account first), each step by step.`,
 };
 
 globalThis.Builder = Builder;

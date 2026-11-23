@@ -28,7 +28,7 @@ JS
 fi
 
 node "$HERE/scripted-model.mjs" >/dev/null &
-(cd "$ADDON" && node "$CLI" serve --port 8799 >/dev/null 2>&1) &
+(cd "$ADDON" && exec node "$CLI" serve --port 8799 >/dev/null 2>&1) &
 sleep 2
 
 # The check edits the session, so it refuses one that has tracks unless its name says it's a

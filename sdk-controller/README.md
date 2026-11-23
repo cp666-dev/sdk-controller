@@ -33,10 +33,18 @@ Saving a key checks it at once and picks the model from the provider's own list.
 
 ## Sharing to UA Universe
 
-SHARE packs an Add On built here and sends it, with the builder's name, title, description and
-category, to `../sdk-controller-share`, where it waits for review. `review.mjs publish` makes its
-public repository and release, which Universe lists. No GitHub account on the builder's side.
-See `../sdk-controller-package/PUBLISHING.md`.
+SHARE (`share.js`) offers three ways, each as numbered steps:
+
+- **Share it for me:** the helper packs the Add On and sends it to `../sdk-controller-share`, which
+  publishes it on the luna-universe-community GitHub account, credited to the builder.
+- **Use my GitHub account:** GitHub's device sign-in (a short code typed on github.com, through the
+  helper's `/github/connect/*`), then `/github/publish` makes a public repository and release on
+  their account, then a checklist for UA Universe (sign in, builder agreement, the UA Universe
+  GitHub app, submit). The token is kept in LUNA's keychain.
+- **Help me make a GitHub account:** guided sign-up, then the same.
+
+`check/share-check.sh` drives all three against a stand-in GitHub and a local share service.
+Release notes are in `CHANGELOG.md`.
 
 ## What it can do
 
