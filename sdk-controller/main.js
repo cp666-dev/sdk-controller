@@ -16,7 +16,7 @@ const settings = loadSettings();
 
 function loadSettings() {
   // A first install starts on the free provider.
-  const fallback = { provider: 'google', autoApprove: false, models: {}, autoModels: {}, baseUrls: {} };
+  const fallback = { provider: 'google', autoApprove: false, models: {}, autoModels: {}, baseUrls: {}, beatStopped: false };
   try {
     const saved = { ...fallback, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') };
     if (!PROVIDERS[saved.provider]) saved.provider = fallback.provider;
@@ -175,6 +175,20 @@ const busy = { timer: null, shown: null, started: 0, step: 0 };
   }
 })();
 
+// The beat can be stopped while a request runs, and stays stopped (or playing) next time. It only
+// stops the grid's playhead: STOP at the bottom is what cancels the request.
+function paintBeat() {
+  $('seq-play').textContent = settings.beatStopped ? 'PLAY BEAT' : 'STOP BEAT';
+  $('seq-play').setAttribute('aria-pressed', String(settings.beatStopped));
+  if (settings.beatStopped) for (const c of $('seq').querySelectorAll('.is-now')) c.classList.remove('is-now');
+}
+$('seq-play').onclick = () => {
+  settings.beatStopped = !settings.beatStopped;
+  saveSettings();
+  paintBeat();
+};
+paintBeat();
+
 function busyStage(text) {
   $('busy-stage').textContent = text;
 }
@@ -189,7 +203,7 @@ function startBusy() {
   busy.timer = setInterval(() => {
     const s = Math.floor((Date.now() - busy.started) / 1000);
     $('busy-time').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    if (reduced) return;
+    if (reduced || settings.beatStopped) return;
     // 120 BPM sixteenths: the playhead moves along the grid, lighting the steps it plays.
     const cells = [...$('seq').querySelectorAll('.sdc-cell')];
     cells.forEach((c, i) => c.classList.toggle('is-now', i % 16 === busy.step));

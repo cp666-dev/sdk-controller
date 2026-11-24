@@ -185,7 +185,7 @@ async function listFiles(root, dir = root, out = []) {
   return out;
 }
 
-export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.execPath, runner = run, shareUrl = SHARE_URL, fetchImpl = fetch, checkPage = true, port = PORT, githubClientId = GITHUB_CLIENT_ID, githubFetch = fetch, githubUrls = {} } = {}) {
+export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.execPath, runner = run, shareUrl = SHARE_URL, fetchImpl = fetch, checkPage = true, port = PORT, shareWaitMs = 3000, githubClientId = GITHUB_CLIENT_ID, githubFetch = fetch, githubUrls = {} } = {}) {
   let listening = null;
   const sharedFile = join(workspace, SHARED);
   const readShared = async () => (existsSync(sharedFile) ? JSON.parse(await readFile(sharedFile, 'utf8')) : {});
@@ -208,16 +208,39 @@ export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.
 
   const github = createGitHubUser({ clientId: githubClientId, fetchImpl: githubFetch, packAddOn, readShared, writeShared, ...githubUrls });
 
-  async function toShare(path, init) {
-    let response;
-    try {
-      response = await fetchImpl(`${shareUrl}${path}`, init);
-    } catch {
-      throw new Refused('Could not reach the Universe sharing service. Check your internet connection and try again.');
+  // The sharing service sleeps when nobody is using it, and its host can take a minute to start it
+  // again, answering 502 to 504 meanwhile. Those come from the host, before the service sees the
+  // request, so they are safe to send again.
+  const WAKING = new Set([502, 503, 504]);
+  const pause = () => new Promise((done) => setTimeout(done, shareWaitMs));
+  async function wakeShare() {
+    for (let tries = 0; tries < 30; tries++) {
+      const response = await fetchImpl(`${shareUrl}/health`).catch(() => null);
+      if (response?.ok) return;
+      if (response && !WAKING.has(response.status)) return;
+      await pause();
     }
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Refused(body.error ?? `The sharing service answered ${response.status}.`);
-    return body;
+  }
+  async function toShare(path, init, { wake = false } = {}) {
+    if (wake) await wakeShare();
+    for (let tries = 0; ; tries++) {
+      let response;
+      try {
+        response = await fetchImpl(`${shareUrl}${path}`, init);
+      } catch {
+        throw new Refused('Could not reach the Universe sharing service. Check your internet connection and try again.');
+      }
+      if (WAKING.has(response.status) && tries < 3) {
+        await pause();
+        continue;
+      }
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) return body;
+      if (body.error) throw new Refused(body.error);
+      throw new Refused(response.status >= 500
+        ? "The Universe sharing service isn't answering right now. Nothing was shared: try again in a few minutes."
+        : `The sharing service answered ${response.status}.`);
+    }
   }
   const cli = cliIn(sdkRoot);
   const npm = 'npm';
@@ -306,8 +329,8 @@ export function createHelper({ workspace, sdkRoot = DEFAULT_SDK, node = process.
       const submission = await toShare('/submissions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ addOn, builderName, title, description, categories, agreed, origin: { builderKey, sdkController: '2.0.0' } }),
-      });
+        body: JSON.stringify({ addOn, builderName, title, description, categories, agreed, origin: { builderKey, sdkController: '2.0.1' } }),
+      }, { wake: true });
       const shared = await readShared();
       shared[folder] = { ...(shared[folder] ?? {}), id: submission.id, title: submission.title, submittedAt: submission.submittedAt };
       await writeShared(shared);

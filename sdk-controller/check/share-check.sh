@@ -1,7 +1,7 @@
 #!/bin/bash
 # The three ways to share, driven in headless Chrome against check/share-rig.mjs: a stand-in
 # GitHub and a local share service, so nothing real is published. Passes only if each way reaches
-# its last step. Needs the private repo's sdk-controller-share folder beside this one.
+# its last step, through a share service that is still waking up. Needs the private repo's sdk-controller-share folder beside this one.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ADDON="$(dirname "$HERE")"
@@ -20,11 +20,17 @@ U="http://localhost:8790/?helper=8807"
 OPEN="if (typeof session === 'undefined' || !session) return false; if (!window.__o) { window.__o = 1; localStorage.clear(); document.getElementById('share-toggle').click(); return false; } if (document.getElementById('share-body').hidden) return false;"
 fail=0
 run() { # name, wait body, expected text in the expression's result
-  local out
-  out=$(node "$CLI" probe "$U" --mock --settle 200 --timeout 40000 --wait "(() => { $OPEN $2 })()" --expr "document.getElementById('share-stepper').textContent + ' / ' + (document.querySelector('.sdc-stepcard:not([hidden]) .sdc-step-h')?.textContent ?? '')" 2>&1 | tail -1)
-  if [[ "$out" == *"$3"* ]]; then echo "ok      $1"; else echo "FAILED  $1: $out"; fail=1; fi
+  local out reached=yes
+  out=$(node "$CLI" probe "$U" --mock --settle 200 --timeout 40000 --wait "(() => { $OPEN $2 })()" --expr "document.getElementById('share-stepper').textContent + ' / ' + (document.querySelector('.sdc-stepcard:not([hidden]) .sdc-step-h')?.textContent ?? '')" 2>&1 | tail -1) || reached=no
+  # Passes only if the page got where the wait says, not just shows the text (the stepper always does).
+  if [[ $reached = yes && "$out" == *"$3"* ]]; then echo "ok      $1"; else echo "FAILED  $1 (reached: $reached): $out"; fail=1; fi
 }
 run "Share it for me" "if (!window.__w) { window.__w = 1; document.querySelector('[data-way=community]').click(); setTimeout(() => { document.getElementById('share-name').value = 'Sam'; document.getElementById('share-agree').checked = true; document.getElementById('share-send').click(); }, 300); return false; } return !document.querySelector('[data-step=done]').hidden;" "2. Shared"
 run "Use my GitHub account" "if (!window.__w) { window.__w = 1; document.querySelector('[data-way=github]').click(); setTimeout(() => document.getElementById('share-connect').click(), 300); return false; } if (!document.getElementById('share-connect-done').hidden && !window.__n) { window.__n = 1; document.getElementById('share-connect-next').click(); setTimeout(() => { document.getElementById('share-name').value = 'Sam'; document.getElementById('share-agree').checked = true; document.getElementById('share-send').click(); }, 300); } return document.querySelectorAll('#share-checklist li').length === 4;" "Put it on UA Universe"
 run "Help me make a GitHub account" "if (!window.__w) { window.__w = 1; document.querySelector('[data-way=newgithub]').click(); setTimeout(() => { const box = document.getElementById('share-account-done'); box.checked = true; box.dispatchEvent(new Event('change')); document.getElementById('share-account-next').click(); }, 300); return false; } return !document.querySelector('[data-step=connect]').hidden;" "Connect your GitHub account"
+# The category menu lists names (the SDK's list holds objects), and the submission carries one.
+menu=$(node "$CLI" probe "$U" --mock --settle 200 --timeout 40000 --wait "(() => { $OPEN return true; })()" --expr "[...document.querySelectorAll('#share-category option')].map((o) => o.value).join(',')" 2>&1 | tail -1) || true
+if [[ "$menu" == *"Workflow"* && "$menu" != *"object"* ]]; then echo "ok      Category menu"; else echo "FAILED  Category menu: $menu"; fail=1; fi
+sent=$(cat "$RIG_DIR"/data/submissions/*/submission.json 2>/dev/null | node -e "let t='';process.stdin.on('data',(d)=>t+=d).on('end',()=>{try{console.log(JSON.parse(t).categories.join(','))}catch{console.log('none')}})") || true
+if [[ -n "$sent" && ",${menu//\"/}," == *",$sent,"* ]]; then echo "ok      Shared with category $sent"; else echo "FAILED  Shared with category: $sent"; fail=1; fi
 [ $fail = 0 ] && echo "SHARE CHECK PASSED" || { echo "SHARE CHECK FAILED"; exit 1; }

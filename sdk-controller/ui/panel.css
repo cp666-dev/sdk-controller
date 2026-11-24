@@ -150,6 +150,9 @@ html, body { margin: 0; height: 100%; background: var(--aip-page); }
 .sdc-busy-led { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--aip-amber); box-shadow: 0 0 6px var(--aip-amber); animation: sdc-think .55s ease-in-out infinite alternate; }
 .sdc-busy-stage { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sdc-busy-time { flex: none; font: 12px Menlo, monospace; color: var(--aip-text-grey); }
+.sdc .sdc-seq-play { flex: none; padding: 2px 7px; font-size: 10px; letter-spacing: .04em; color: var(--aip-text-grey); background: var(--aip-field-dark); border: 1px solid var(--aip-edge); border-radius: 3px; cursor: pointer; }
+.sdc .sdc-seq-play:hover { color: inherit; border-color: var(--aip-seg-underline); }
+.sdc .sdc-seq-play[aria-pressed="true"] { color: var(--aip-amber); }
 .sdc-seq { display: grid; grid-template-columns: 44px repeat(16, 1fr); gap: 3px; align-items: center; }
 .sdc-seq-name { font-size: 10px; line-height: 14px; color: var(--aip-text-grey); text-transform: uppercase; letter-spacing: .04em; }
 .sdc .sdc-cell { height: 20px; padding: 0; -webkit-appearance: none; appearance: none; font-size: 0; line-height: 0; color: transparent; border: 1px solid #000; border-radius: 2px; background: var(--aip-field-dark); transition: background .08s linear, box-shadow .12s ease-out; }

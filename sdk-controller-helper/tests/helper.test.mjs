@@ -157,6 +157,50 @@ describe('sharing to Universe', () => {
   });
 });
 
+describe('a sharing service that is asleep', () => {
+  // Its host answers 502 to 504 until the service is up again: wait for it rather than fail.
+  async function sharing(answers) {
+    const calls = [];
+    const fetchImpl = async (u, init) => {
+      calls.push(`${init?.method ?? 'GET'} ${new URL(u).pathname}`);
+      const status = answers.shift() ?? 200;
+      if (status >= 500) return new Response('', { status });
+      return new Response(JSON.stringify(u.endsWith('/submissions') ? { id: 'b'.repeat(24), title: 'Demo' } : { ok: true }), { status: u.endsWith('/submissions') ? 201 : 200 });
+    };
+    const runner = async (command, args) => {
+      if (args[1] === 'pack') await writeFile(args[args.indexOf('--out') + 1], 'PK-fake');
+      return { ok: true, code: 0, output: '' };
+    };
+    const helper = createHelper({ workspace, sdkRoot, runner, shareUrl: 'https://share.test', fetchImpl, checkPage: false, shareWaitMs: 1 });
+    await new Promise((r) => helper.listen(0, '127.0.0.1', r));
+    const r = await fetch(`http://127.0.0.1:${helper.address().port}/share`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: ORIGIN },
+      body: JSON.stringify({ folder: 'demo', builderName: 'Sam', title: 'Demo', agreed: true }),
+    });
+    helper.close();
+    return { status: r.status, body: await r.json(), calls };
+  }
+
+  it('wakes it first, then shares once', async () => {
+    const { status, calls } = await sharing([502, 503, 200, 201]);
+    assert.equal(status, 200);
+    assert.deepEqual(calls, ['GET /health', 'GET /health', 'GET /health', 'POST /submissions']);
+  });
+
+  it('sends the share again when the host was still waking it', async () => {
+    const { status, calls } = await sharing([200, 502, 201]);
+    assert.equal(status, 200);
+    assert.deepEqual(calls.filter((c) => c.startsWith('POST')).length, 2);
+  });
+
+  it('says plainly that nothing was shared when it never wakes', async () => {
+    const { status, body } = await sharing(Array(40).fill(502));
+    assert.equal(status, 400);
+    assert.match(body.error, /isn't answering right now\. Nothing was shared/);
+  });
+});
+
 describe('only working Add Ons get installed', () => {
   it('fails the tests when a page script would not load, and then refuses to install', async () => {
     await post('/write', { folder: 'demo', path: 'logic.js', contents: "import { Luna } from 'luna';\nexport const x = 1;" });

@@ -1,5 +1,18 @@
 # SDK Controller release notes
 
+## 2.0.1
+
+- **Category menu fixed.** When sharing, "Category, where people will find it" listed
+  "[object Object]" instead of the categories. It lists them again, with a short description of
+  each when you hover over one.
+- **Sharing waits for the sharing service to wake up.** "Share it for me" could fail with "The
+  sharing service answered 502" when the service had been idle. SDK Controller now waits for it
+  (up to about a minute and a half) and then shares. If it really is down, it says so plainly
+  and that nothing was shared.
+- **Stop the beat.** While SDK Controller works on a prompt, STOP BEAT next to the timer stops the
+  step sequencer, and PLAY BEAT starts it again. It remembers your choice. The STOP button at the
+  bottom still cancels the request.
+
 ## 2.0.0
 
 **Three ways to share to UA Universe.** SHARE now asks how you'd like to share an Add On you

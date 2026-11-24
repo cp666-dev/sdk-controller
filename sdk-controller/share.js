@@ -329,9 +329,11 @@ $('share-disconnect').onclick = async () => {
 // Step: describe it, then share or publish
 // ---------------------------------------------------------------------------------------------
 
+// The SDK lists each category as { name, description } (older SDKs list plain names).
 for (const category of Luna.ADD_ON_CATEGORIES) {
   const option = document.createElement('option');
-  option.value = option.textContent = category;
+  option.value = option.textContent = typeof category === 'string' ? category : category.name;
+  if (category.description) option.title = category.description;
   $('share-category').appendChild(option);
 }
 
